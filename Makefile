@@ -1,5 +1,5 @@
 clean:
-	rm -f *.out *.log
+	rm -Rf *.out *.log stdout
 
 test:
 	./memprof.py -i name,test_exe.py
