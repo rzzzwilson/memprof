@@ -16,3 +16,6 @@ Requirements
 ------------
 
 Uses the *psutil* module, which you can get from: https://pypi.org/project/psutil/
+Alternatively, do::
+
+    pip3 install -r requirements.txt
