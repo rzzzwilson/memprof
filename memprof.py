@@ -10,6 +10,8 @@ file.
 Usage: memprof [-h] [-i <file_list>] [-f <filename>] [-o <profile_file>]
 
 where -h                  prints help messages and quits,
+      -d <outdir>         sets the directory to receive stdout capture files
+                          (default "stdout")
       -i <name_file>      profiles name+filename (cumulative),
       -f <filename>       read <filename> for a list of names+files to profile,
       -o <profile_file>   write profile data to <profile_file>
@@ -25,8 +27,9 @@ import psutil
 import subprocess
 
 
-# default output filename
+# default output filename and stdout save dir
 DefaultOutputFile = 'memprof.out'
+DefaultStdoutSave = 'stdout'
 
 
 def abort(msg):
@@ -85,20 +88,29 @@ def read_input_file(path):
 
     return result
 
-def memprof(files, output_file):
+def memprof(files, output_file, save_dir):
     """Create a memory profile of one or more executable files.
 
     files        a list of names+executable files
     output_file  the file to write profile information to
+    save_dir     the directory in which to store stdout save files
     """
 
+    # create the save directory, if necessary
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+
+    # open the stats save file
     fd = open(output_file, 'w')
 
+    # process each executable
     for (name, exe_path) in files:
+        stdout_save = os.path.join(save_dir, name + '.stdout')
         if not os.path.isabs(exe_path):
             exe_path = os.path.abspath(exe_path)
         #process = subprocess.Popen(exe_path + ' > /dev/null 2> /dev/null &', shell=True)
-        process = subprocess.Popen(exe_path, shell=True)
+        with open(stdout_save, 'w') as save_fd:
+            process = subprocess.Popen(exe_path, shell=True, stdout=save_fd)
         pid = process.pid
 
         # now do memory profile until process quits
@@ -141,13 +153,14 @@ def main():
     argv = sys.argv[1:]
     
     try:
-        (opts, args) = getopt.getopt(argv, 'hi:f:o:',
-                                     ['help', 'input=', 'file=', 'output='])
+        (opts, args) = getopt.getopt(argv, 'hi:f:o:s:',
+                                     ['help', 'input=', 'file=', 'output=', 'save='])
     except getopt.GetoptError as err:
         usage(err)
         sys.exit(1)
     
     output_file = DefaultOutputFile
+    save_dir = DefaultStdoutSave
     file_list = []
     
     for (opt, param) in opts:
@@ -164,6 +177,8 @@ def main():
             file_list = read_input_file(param)
         if opt in ['-o', '--output']:
             output_file = param
+        if opt in ['-s', '--save']:
+            save_dir = param
 
     # sanity check
     if not file_list:
@@ -171,6 +186,6 @@ def main():
         abort('You must supply one or more executable files to profile.')
     
     # run the program code
-    memprof(file_list, output_file)
+    memprof(file_list, output_file, save_dir)
 
 main()
