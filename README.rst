@@ -10,7 +10,10 @@ file.
 See the *__doc__* string in memprof.py for usage.
 
 This program was written to help determine memory usage in various of the
-performance tests elsewhere in this GitHub repository.
+performance tests elsewhere in this GitHub repository.  It does this by saving
+all memory measurement values in a single file, as well as the "stdout" of each
+in a save directory.  The aim is to generate enough data such that suite of speed
+test programs can be used with memprof to automatically create a result PDF file.
 
 Requirements
 ------------
