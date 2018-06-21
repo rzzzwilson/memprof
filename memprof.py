@@ -10,12 +10,12 @@ file.
 Usage: memprof [-h] [-i <file_list>] [-f <filename>] [-o <profile_file>]
 
 where -h                  prints help messages and quits,
-      -d <outdir>         sets the directory to receive stdout capture files
-                          (default "stdout")
       -i <name_file>      profiles name+filename (cumulative),
       -f <filename>       read <filename> for a list of names+files to profile,
       -o <profile_file>   write profile data to <profile_file>
                           (default "profile.out").
+      -s <outdir>         sets the directory to receive stdout capture files
+                          (default "stdout")
 """
 
 import os
@@ -23,8 +23,9 @@ import sys
 import time
 import getopt
 import traceback
-import psutil
 import subprocess
+
+import psutil
 
 
 # default output filename and stdout save dir

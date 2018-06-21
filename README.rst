@@ -11,3 +11,8 @@ See the *__doc__* string in memprof.py for usage.
 
 This program was written to help determine memory usage in various of the
 performance tests elsewhere in this GitHub repository.
+
+Requirements
+------------
+
+Uses the *psutil* module, which you can get from: https://pypi.org/project/psutil/
