@@ -143,8 +143,6 @@ def excepthook(type, value, tb):
     msg += ''.join(traceback.format_exception(type, value, tb))
     msg += '=' * 80 + '\n'
     print(msg)
-#    log(msg)
-#    tkinter_error(msg)
 
 def main():
     # plug our handler into the python system
