@@ -1,6 +1,8 @@
 # project-specific ignores
+*.swp
 *.out
 *.log
+stdout
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
