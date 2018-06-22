@@ -126,9 +126,6 @@ def memprof(files, output_file, save_dir):
 
     fd.close()
 
-def memory_usage_psutil():
-    # return the memory usage in MB
-    return mem
 
 # to help the befuddled user
 def usage(msg=None):
