@@ -1,3 +1,4 @@
+import sys
 import matplotlib
 import matplotlib.pyplot as plt
 import common
@@ -40,9 +41,16 @@ def plot(t, s, anno):
     fig.savefig(f'test.png')
     plt.show()
 
-# read data from file 'memprof.out'
-# 1529579605.214047|name|274432
-with open('memprof.out') as fd:
+
+InputFile = 'memprof.out'
+
+if len(sys.argv) == 2:
+    InputFile = sys.argv[1]
+
+# read data from file
+# format: 1529579605.214047|name|274432
+#         time              name memory
+with open(InputFile) as fd:
     lines = fd.readlines()
 
 t = []
