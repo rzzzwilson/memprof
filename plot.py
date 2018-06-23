@@ -57,10 +57,11 @@ def plot(t, s, anno, unit_name, output_file, quiet):
                 horizontalalignment='left', verticalalignment='top')
 
     # put the number of loops in as a "footnote"
-    ax.annotate(f'loops={common.loops}', xy=(0, 0),  xycoords='data', rotation=90,
+    matplotlib.rc('font', **{'size': 7})  # set font size smaller
+    ax.annotate(f'{common.loops:,} concatenations', xy=(0, 0), 
+                xycoords='data', rotation=270,
                 xytext=(1.005, 0.01), textcoords='axes fraction',
-                horizontalalignment='left', verticalalignment='bottom',
-                )
+                horizontalalignment='left', verticalalignment='bottom')
 
     fig.savefig(output_file)
     if not quiet:

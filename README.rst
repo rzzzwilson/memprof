@@ -47,8 +47,11 @@ time and memory usage.  The output image is:
 
 .. image:: latest_test.png
 
-There is one *funny* noted.  If the number of test loops (defined in **common.py**)
+There *was* one problem noted.  If the number of test loops (defined in **common.py**)
 is set to 50 million, we see glitches in the graph:
 
 .. image:: glitch_test.png
+
+Have to investigate this.  After further testing, can't reliably repeat this,
+so it may be environmental.
 
