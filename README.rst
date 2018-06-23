@@ -38,3 +38,17 @@ Also uses *matplotlib* to plot the graph, get from: https://matplotlib.org/faq/i
 Alternatively, do::
 
     pip3 install -r requirements.txt
+
+Status
+------
+
+The system is running with four test executables measuring string concatenation
+time and memory usage.  The output image is:
+
+.. image:: test.png
+
+There is one *funny* noted.  If the number of test loops (defined in **common.py**)
+is set to 50 million, we see glitches in the graph:
+
+.. image:: glitch_test.png
+
