@@ -8,6 +8,7 @@ Usage:  plot.py [-h] [-m] [-o <output_image>] <input_file>
 where -h                 prints help text and stops
       -m                 use MB memory size, not MiB
       -o <output_image>  saves the image in file <output_image>
+      -q                 be "quiet" - don't show graph, just save
       <input_file>       the memprof data file to plot
 """
 
@@ -25,7 +26,7 @@ Megabyte = (1024*1024, 'MB')
 DefaultOutputFile = 'test.png'
 
 
-def plot(t, s, anno, unit_name, output_file):
+def plot(t, s, anno, unit_name, output_file, quiet):
     """
     Plot a graph.
 
@@ -33,6 +34,7 @@ def plot(t, s, anno, unit_name, output_file):
     s         data series
     anno      a list of tuples - annotations
     unit_str  string holding units
+    quiet     True if we *don't* display graph on screen
     """
 
     max_t = max(t)
@@ -56,19 +58,21 @@ def plot(t, s, anno, unit_name, output_file):
 
     # put the number of loops in as a "footnote"
     ax.annotate(f'loops={common.loops}', xy=(0, 0),  xycoords='data', rotation=90,
-                xytext=(1.00, 0.01), textcoords='axes fraction',
+                xytext=(1.005, 0.01), textcoords='axes fraction',
                 horizontalalignment='left', verticalalignment='bottom',
                 )
 
     fig.savefig(output_file)
-    plt.show()
+    if not quiet:
+        plt.show()
 
 
-def analyze(input_file, unit, output_file):
+def analyze(input_file, unit, output_file, quiet):
     """Analyze then plot a data file.
 
     input_file   path to the memprof data file to analyze
     unit         a tuple of (multiplier, name)
+    quiet        True if we *don't* display the graph on the screen
 
     """
 
@@ -111,7 +115,7 @@ def analyze(input_file, unit, output_file):
     delta = t_elt - last_start
     anno.append((t_elt, delta, last_name))
 
-    plot(t, s, anno, unit_name, output_file)
+    plot(t, s, anno, unit_name, output_file, quiet)
 
 if __name__ == '__main__':
     import sys
@@ -137,13 +141,15 @@ if __name__ == '__main__':
         argv = sys.argv[1:]
 
         try:
-            (opts, args) = getopt.getopt(argv, 'hmo:', ['help', 'mb', 'output='])
+            (opts, args) = getopt.getopt(argv, 'hmo:q',
+                                         ['help', 'mb', 'output=', 'quiet'])
         except getopt.GetoptError as err:
             usage(err)
             sys.exit(1)
 
         output_file = DefaultOutputFile
         unit = Mebibyte
+        quiet = False
 
         for (opt, param) in opts:
             if opt in ['-h', '--help']:
@@ -153,6 +159,8 @@ if __name__ == '__main__':
                 unit = Megabyte
             if opt in ['-o', '--output']:
                 output_file = param
+            if opt in ['-q', '--quiet']:
+                quiet = True
 
         # we MUST have a single input filename
         if len(args) != 1:
@@ -160,7 +168,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         # run the program code
-        analyze(args[0], unit, output_file)
+        analyze(args[0], unit, output_file, quiet)
 
 
     main()

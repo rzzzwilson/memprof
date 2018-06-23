@@ -45,7 +45,7 @@ Status
 The system is running with four test executables measuring string concatenation
 time and memory usage.  The output image is:
 
-.. image:: test.png
+.. image:: latest_test.png
 
 There is one *funny* noted.  If the number of test loops (defined in **common.py**)
 is set to 50 million, we see glitches in the graph:
