@@ -9,9 +9,7 @@ try:
     from cStringIO import StringIO
 except ImportError:
     # python3 - make changes
-    import io
-    global StringIO
-    StringIO = io.StringIO
+    from io import StringIO
     xrange = range
 
 

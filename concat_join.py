@@ -12,7 +12,6 @@ if sys.version_info >= (3, 0):
 
 
 a = []
-
 for n in xrange(common.loops):
     a.append(str(n))
 a = ''.join(a)
