@@ -46,6 +46,7 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
     max_s = (max(s) // 100) * 100
 
     (fig, ax) = plt.subplots()
+
     ax.plot(t, s)
     ax.set(xlabel='time (s)', ylabel=f'Memory used ({unit_name})',
            title=f'Memory usage by time')
@@ -78,10 +79,10 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
                     horizontalalignment='left', verticalalignment='top')
 
     # put a 'date/time modified' string on the graph
-    matplotlib.rc('font', **{'size': 5})  # set font size smaller
+    matplotlib.rc('font', **{'size': 4})  # set font size smaller
     ax.annotate(f'data generated {dt}', xy=(0, 0),
                 xycoords='data', #rotation=270,
-                xytext=(1.00, -0.12), textcoords='axes fraction',
+                xytext=(1.0, -0.095), textcoords='axes fraction',
                 horizontalalignment='right', verticalalignment='top')
 
     # save graph and show, if required
