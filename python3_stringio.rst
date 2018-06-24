@@ -19,5 +19,5 @@ Conclusion
 There are two conclusions:
 
 * *memprof* data capture is fine-grained enough,
-* there must have been some change when the python2 *StringIO* cwcodemodule was
+* there must have been some change when the python2 *StringIO* code was
   moved to the python3 *io.StringIO* code.
