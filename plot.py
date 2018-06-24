@@ -12,6 +12,9 @@ where -h                 prints help text and stops
       <input_file>       the memprof data file to plot
 """
 
+import time
+import os.path
+import datetime
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -26,7 +29,7 @@ Megabyte = (1024*1024, 'MB')
 DefaultOutputFile = 'test.png'
 
 
-def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info):
+def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
     """
     Plot a graph.
 
@@ -36,6 +39,7 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info):
     unit_name  string holding units
     quiet      True if we *don't* display graph on screen
     p_info     optional platform description string
+    dt         datetime string of data last modification
     """
 
     max_t = max(t)
@@ -73,6 +77,13 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info):
                     xytext=(1.003, 1.00), textcoords='axes fraction',
                     horizontalalignment='left', verticalalignment='top')
 
+    # put a 'date/time modified' string on the graph
+    matplotlib.rc('font', **{'size': 5})  # set font size smaller
+    ax.annotate(f'data generated {dt}', xy=(0, 0),
+                xycoords='data', #rotation=270,
+                xytext=(1.00, -0.12), textcoords='axes fraction',
+                horizontalalignment='right', verticalalignment='top')
+
     # save graph and show, if required
     fig.savefig(output_file, dpi=1000)
     if not quiet:
@@ -92,6 +103,11 @@ def plot(input_file, output_file, p_info=None, quiet=False, unit=Megabyte):
 
     # break out the unit name and multiplier
     (unit_mult, unit_name) = unit
+
+    # get date/time of last data modification
+    data_time = os.path.getmtime(input_file)
+    gm_struct = time.gmtime(data_time)
+    datetime_zulu = time.strftime('%Y-%m-%dT%H:%M:%SZ', gm_struct)
 
     # read data from file
     # format: 1529579605.214047|name|274432
@@ -134,7 +150,7 @@ def plot(input_file, output_file, p_info=None, quiet=False, unit=Megabyte):
     delta = t_elt - last_start
     anno.append((t_elt, delta, last_name, max_mem))
 
-    plot_graph(t, s, anno, unit_name, output_file, quiet, p_info)
+    plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, datetime_zulu)
 
 if __name__ == '__main__':
     import sys
