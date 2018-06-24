@@ -15,8 +15,6 @@ where -h                  prints help messages and quits,
       -g <plotimage>      if specified, the path to the plot file to produce
       -o <profile_file>   write profile data to <profile_file>
                           (default "profile.out").
-      -s <outdir>         sets the directory to receive stdout capture files
-                          (default "stdout")
       -p <2|3>            use python 2 or 3 to execute filenames (3 is default)
 """
 
@@ -31,9 +29,8 @@ import psutil
 import plot
 
 
-# default output filename and stdout save dir
+# default output filename
 DefaultOutputFile = 'memprof.out'
-DefaultStdoutSave = 'stdout'
 
 # versions of python to use
 DefaultPython2 = 'python'
@@ -107,31 +104,24 @@ def read_input_file(path):
 
     return result
 
-def memprof(files, output_file, save_dir, python_exe):
+def memprof(files, output_file, python_exe):
     """Create a memory profile of one or more executable files.
 
     files        a list of names+executable files
     output_file  the file to write profile information to
-    save_dir     the directory in which to store stdout save files
     python_exe   the python to execute the executable files with
     """
-
-    # create the save directory, if necessary
-    if not os.path.isdir(save_dir):
-        os.mkdir(save_dir)
 
     # open the stats save file
     fd = open(output_file, 'w')
 
     # process each executable
     for (name, exe_path) in files:
-        stdout_save = os.path.join(save_dir, name + '.stdout')
         if not os.path.isabs(exe_path):
             exe_path = os.path.abspath(exe_path)
 
         command = '%s %s' % (python_exe, exe_path)
-        with open(stdout_save, 'w') as save_fd:
-            process = subprocess.Popen(command, shell=True, stdout=save_fd)
+        process = subprocess.Popen(command, shell=True)
         pid = process.pid
 
         # now do memory profile until process quits
@@ -177,7 +167,6 @@ def main():
         sys.exit(1)
     
     output_file = DefaultOutputFile
-    save_dir = DefaultStdoutSave
     python_exe = DefaultPython3
     plot_file = None
     file_list = []
@@ -211,8 +200,6 @@ def main():
         if opt in ['-s', '--save']:
             if param == '2':
                 python_exe = DefaultPython2
-        if opt in ['-s', '--save']:
-            save_dir = param
 
     # sanity check
     if not file_list:
@@ -220,7 +207,7 @@ def main():
         abort('You must supply one or more executable files to profile.')
     
     # run the program code
-    memprof(file_list, output_file, save_dir, python_exe)
+    memprof(file_list, output_file, python_exe)
 
     # if plot needed, do it
     if plot_file:

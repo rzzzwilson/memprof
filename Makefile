@@ -1,5 +1,5 @@
 clean:
-	rm -Rf *.log stdout *.pyc __pycache__
+	rm -Rf *.log *.pyc __pycache__
 
 # test using python 3 for the monitored executables
 test:
