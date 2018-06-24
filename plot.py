@@ -64,7 +64,7 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
                 rotation=270, horizontalalignment='left', verticalalignment='top')
 
     # put the number of loops in as a "footnote"
-    matplotlib.rc('font', **{'size': 6})  # set font size smaller
+    matplotlib.rc('font', **{'size': 5})  # set font size smaller
     ax.annotate(f'{common.loops:,} concatenations', xy=(0, 0), 
                 xycoords='data', rotation=270,
                 xytext=(1.003, 0.00), textcoords='axes fraction',
@@ -72,7 +72,7 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
 
     # put the platform description string in if we have one
     if p_info:
-        matplotlib.rc('font', **{'size': 6})  # set font size smaller
+        matplotlib.rc('font', **{'size': 5})  # set font size smaller
         ax.annotate(f'{p_info}', xy=(0, 0),
                     xycoords='data', rotation=270,
                     xytext=(1.003, 1.00), textcoords='axes fraction',
@@ -80,7 +80,7 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
 
     # put a 'date/time modified' string on the graph
     matplotlib.rc('font', **{'size': 4})  # set font size smaller
-    ax.annotate(f'data generated {dt}', xy=(0, 0),
+    ax.annotate(f'from data generated on {dt}', xy=(0, 0),
                 xycoords='data', #rotation=270,
                 xytext=(1.0, -0.095), textcoords='axes fraction',
                 horizontalalignment='right', verticalalignment='top')
