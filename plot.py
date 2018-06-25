@@ -14,7 +14,6 @@ where -h                 prints help text and stops
 
 import time
 import os.path
-import datetime
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -29,16 +28,22 @@ Megabyte = (1024*1024, 'MB')
 DefaultOutputFile = 'test.png'
 
 
-def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
+def get_platform_info():
+    """Get a string describing the execution platform."""
+
+    return platform.platform().strip()
+
+
+def plot_graph(t, s, p_info, anno, unit_name, output_file, quiet, dt):
     """
     Plot a graph.
 
     t          time series
     s          data series
+    p_info     platform description string
     anno       a list of tuples - annotations
     unit_name  string holding units
     quiet      True if we *don't* display graph on screen
-    p_info     optional platform description string
     dt         datetime string of data last modification
     """
 
@@ -53,7 +58,7 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
     ax.grid()
 
     # draw a rectangle around the sub-graph for each name, alternate colors
-    matplotlib.rc('font', **{'size': 8})  # set font size smaller
+    matplotlib.rc('font', **{'size': 7})  # set font size smaller
     for (i, (end_time, delta, name, max_mem)) in enumerate(anno):
         color = '#F0F0F080' if (i % 2) == 0 else '#FFFFFF00'
         rect = patches.Rectangle((end_time-delta,-100), delta, 2*max_s,
@@ -91,12 +96,11 @@ def plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, dt):
         plt.show()
 
 
-def plot(input_file, output_file, p_info=None, quiet=False, unit=Megabyte):
+def plot(input_file, output_file, quiet=False, unit=Megabyte):
     """Analyze then draw a plot image file.
 
     input_file   path to the memprof data file to analyze
     output_file  path to the output plot image file
-    p_info       optinal string describing platform
     unit         a tuple of (multiplier, name)
     quiet        True if we *don't* display the graph on the screen
 
@@ -116,6 +120,17 @@ def plot(input_file, output_file, p_info=None, quiet=False, unit=Megabyte):
     with open(input_file) as fd:
         lines = fd.readlines()
 
+    # first line should be a comment containing a platform description
+    tmp = lines[0].strip()
+    p_info = None
+    if tmp.startswith('#'):
+        tmp = tmp[1:]
+        while tmp[0] == ' ':
+            tmp = tmp[1:]
+        p_info = tmp
+        lines = lines[1:]
+
+    # get the actual data into memory
     t = []
     s = []
     anno = []
@@ -151,7 +166,8 @@ def plot(input_file, output_file, p_info=None, quiet=False, unit=Megabyte):
     delta = t_elt - last_start
     anno.append((t_elt, delta, last_name, max_mem))
 
-    plot_graph(t, s, anno, unit_name, output_file, quiet, p_info, datetime_zulu)
+    plot_graph(t, s, p_info, anno, unit_name, output_file, quiet, datetime_zulu)
+
 
 if __name__ == '__main__':
     import sys
@@ -205,7 +221,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         # run the program code
-        plot(args[0], output_file, p_info, quiet, unit)
+        plot(args[0], output_file, quiet, unit)
 
 
     main()

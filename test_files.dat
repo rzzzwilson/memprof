@@ -1,4 +1,4 @@
-naive,concat_naive.py
-join,concat_join.py
-comprehension,concat_comprehension.py
-stringio,concat_stringio.py
+naive - python3,python3 concat_naive.py
+join - python3,python3 concat_join.py
+comprehension - python3,python3 concat_comprehension.py
+stringio - python3,python3 concat_stringio.py

@@ -7,15 +7,17 @@ filenames and executes each file in another process, keeping track of
 the memory used by the process.  Profile data is written to an output
 file.
 
-Usage: memprof [-h] [-i <file_list>] [-f <filename>] [-o <profile_file>]
+Usage: memprof [-g <plotimage>] [-h] [-i <file_list>] [-f <filename>] \\
+               [-o <profile_file>] [-s <stdout_save_dir>
 
-where -h                  prints help messages and quits,
-      -i <name_file>      profiles name+filename (cumulative),
-      -f <filename>       read <filename> for a list of names+files to profile,
-      -g <plotimage>      if specified, the path to the plot file to produce
-      -o <profile_file>   write profile data to <profile_file>
-                          (default "profile.out").
-      -p <2|3>            use python 2 or 3 to execute filenames (3 is default)
+where -g <plotimage>        if specified, the path to the plot file to produce
+                            (default "memprof.png")
+      -h                    prints help messages and quits,
+      -i <name_file>        profiles name+filename (cumulative),
+      -f <filename>         get list of name+filename from file (cumulative),
+      -o <profile_file>     write profile data to <profile_file>
+                            (default "memprof.out").
+      -s <stdout_save_dir>  path to the directory to save "stdout" files
 """
 
 import os
@@ -29,12 +31,16 @@ import psutil
 import plot
 
 
-# default output filename
+# default output filenames
 DefaultOutputFile = 'memprof.out'
+DefaultOutputPlot = 'memprof.png'
+DefaultStdoutSaveDir = '__stdout__'
 
-# versions of python to use
-DefaultPython2 = 'python'
-DefaultPython3 = 'python3'
+
+def get_platform_info():
+    """Get a string describing the execution platform."""
+
+    return platform.platform().strip()
 
 
 def abort(msg):
@@ -43,38 +49,23 @@ def abort(msg):
     print(f"\n{'*'*60}\n{msg}\n{'*'*60}\n")
     sys.exit(1)
 
-def get_platform_info(python_exe):
-    """Get a string describing the execution platform.
-    
-    python_exe  path to the python used to execute external programs 
-
-    Returns a string like: 
-    """
-
-    return subprocess.check_output(f'{python_exe} python_info.py',
-                                   stderr=subprocess.STDOUT, shell=True).decode("utf-8").strip()
 
 def canon_name_file(param):
     """Convert name+filename to canonical form.
 
-    param  a string of form "path_to_exe" or "name,path_to_exe".
+    param  a string of form "name,path_to_exe".
 
-    Return a tuple (name, path_to_exe) where "name" is the basename of
-    the path if not supplied.
+    Return a tuple (name, path_to_exe).
 
     Returns None if something went wrong.
     """
 
     name_file = param.split(',')
-    if len(name_file) == 1:
-        name = os.path.basename(param)
-        filename = param
-    elif len(name_file) == 2:
-        (name, filename) = name_file
-    else:
-        return None
+    if len(name_file) == 2:
+        return name_file
 
-    return (name, filename)
+    return None
+
 
 def read_input_file(path):
     """Read input file and return list of filenames.
@@ -91,48 +82,58 @@ def read_input_file(path):
     except FileNotFoundError as e:
         abort(f"File '{path}' not found")
 
-    lines = [f.strip() for f in lines if f.strip()]
-    lines = [line for line in lines if not line.startswith('#')]
 
     result = []
 
-    for line in lines:
-        canon = canon_name_file(line)
+    for (lnum, line) in enumerate(lines):
+        s_line = line.strip()
+        if s_line.startswith('#'):
+            continue
+        canon = canon_name_file(s_line)
         if canon is None:
-            abort(f"Bad line in file '{path}': {line}")
+            abort(f"Bad line {lnum+1} in file '{path}': {line}")
         result.append(canon)
 
     return result
 
-def memprof(files, output_file, python_exe):
+
+def memprof(files, output_file, save_dir):
     """Create a memory profile of one or more executable files.
 
     files        a list of names+executable files
     output_file  the file to write profile information to
-    python_exe   the python to execute the executable files with
+    save_dir     the path to the directory to save stdout in
     """
 
-    # open the stats save file
+    # open the stats save file and write platform string
     fd = open(output_file, 'w')
+    p_info = get_platform_info()
+    fd.write(f'# {p_info}\n')
+
+    # create the output save directory
+    try:
+        os.mkdir(save_dir)
+    except FileExistsError:
+        pass        # already exists
 
     # process each executable
-    for (name, exe_path) in files:
-        if not os.path.isabs(exe_path):
-            exe_path = os.path.abspath(exe_path)
+    for (name, command) in files:
+        # open the stdout save file
+        std_file = os.path.join(save_dir, f'{name}.stdout')
+        with open(std_file, 'a') as std_save:
+            process = subprocess.Popen(command, shell=True,
+                                       stdout=std_save, stderr=std_save)
+            pid = process.pid
 
-        command = '%s %s' % (python_exe, exe_path)
-        process = subprocess.Popen(command, shell=True)
-        pid = process.pid
-
-        # now do memory profile until process quits
-        try:
-            ps_proc = psutil.Process(pid)
-            while process.poll() == None:
-                fd.write(f'{time.time():.6f}|{name}|{ps_proc.memory_info().rss}\n')
-            time.sleep(0.005)
-        except (ProcessLookupError, psutil._exceptions.AccessDenied):
-            # we get either of the above two exceptions sometimes
-            pass
+            # now do memory profile until process quits
+            try:
+                ps_proc = psutil.Process(pid)
+                while process.poll() == None:
+                    fd.write(f'{time.time():.6f}|{name}|{ps_proc.memory_info().rss}\n')
+                time.sleep(0.005)
+            except (ProcessLookupError, psutil._exceptions.AccessDenied):
+                # we get either of the above two exceptions sometimes
+                pass
 
     fd.close()
 
@@ -159,16 +160,16 @@ def main():
     argv = sys.argv[1:]
     
     try:
-        (opts, args) = getopt.getopt(argv, 'hg:i:f:o:p:s:',
-                                     ['help', 'graph=', 'input=', 'file=',
-                                      'output=', 'python=', 'save='])
+        (opts, args) = getopt.getopt(argv, 'hg:i:f:o:s:',
+                                     ['help', 'graph=', 'input=',
+                                      'file=', 'output=', 'save='])
     except getopt.GetoptError as err:
         usage(err)
         sys.exit(1)
     
     output_file = DefaultOutputFile
-    python_exe = DefaultPython3
-    plot_file = None
+    plot_file = DefaultOutputPlot
+    save_dir = DefaultStdoutSaveDir
     file_list = []
     
     for (opt, param) in opts:
@@ -184,22 +185,11 @@ def main():
                 abort(f"'-i' option must be 'filename' or 'name,filename'")
             file_list.append(result)
         if opt in ['-f', '--file']:
-            file_list = read_input_file(param)
+            file_list.extend(read_input_file(param))
         if opt in ['-o', '--output']:
             output_file = param
-        if opt in ['-p', '--python']:
-            if param not in ['2', '3']:
-                abort()
-            if param == '2':
-                python_exe = DefaultPython2
-            if param == '3':
-                python_exe = DefaultPython3
         if opt in ['-s', '--save']:
-            if param == '2':
-                python_exe = DefaultPython2
-        if opt in ['-s', '--save']:
-            if param == '2':
-                python_exe = DefaultPython2
+            save_dir = param
 
     # sanity check
     if not file_list:
@@ -207,11 +197,10 @@ def main():
         abort('You must supply one or more executable files to profile.')
     
     # run the program code
-    memprof(file_list, output_file, python_exe)
+    memprof(file_list, output_file, save_dir)
 
     # if plot needed, do it
     if plot_file:
-        p_info = get_platform_info(python_exe)
-        plot.plot(output_file, plot_file, p_info)
+        plot.plot(output_file, plot_file)
 
 main()
