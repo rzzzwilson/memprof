@@ -6,7 +6,6 @@ Plot and save a memprof dataset.
 Usage:  plot.py [-h] [-m] [-o <output_image>] [-q] <input_file>
 
 where -h                 prints help text and stops
-      -m                 use MiB memory size, not MB
       -o <output_image>  saves the image in file <output_image>
       -q                 be "quiet" - don't show graph, just save
       <input_file>       the memprof data file to plot
@@ -17,12 +16,14 @@ import os.path
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.lines as mlines
 import common
 
 
-# memory size multiplier and title
-Mebibyte = (1000000, 'MiB')
-Megabyte = (1024*1024, 'MB')
+# memory size multiplier/divisors
+KiloByte = 1024
+MegaByte = 1024*1024
+GigaByte = 1024*1024*1024
 
 # default output file
 DefaultOutputFile = 'test.png'
@@ -34,39 +35,75 @@ def get_platform_info():
     return platform.platform().strip()
 
 
-def plot_graph(t, s, p_info, anno, unit_name, output_file, quiet, dt):
+def plot_graph(t, s, p_info, anno, output_file, quiet, dt):
     """
     Plot a graph.
 
-    t          time series
-    s          data series
-    p_info     platform description string
-    anno       a list of tuples - annotations
-    unit_name  string holding units
-    quiet      True if we *don't* display graph on screen
-    dt         datetime string of data last modification
+    t       time series
+    s       data series
+    p_info  platform description string
+    anno    a list of tuples - annotations
+    quiet   True if we *don't* display graph on screen
+    dt      datetime string of data last modification
     """
 
+    # get max values of memory and time series
+    max_s = max(s)
     max_t = max(t)
-    max_s = (max(s) // 100) * 100
+    basetime = t[0]
 
+    # figure out the best unit to plot with: B, KB or MB
+    divisor = GigaByte
+    unit = 'GB'
+
+    if max_s < GigaByte:
+        divisor = MegaByte
+        unit = 'MB'
+    if max_s < MegaByte:
+        divisor = KiloByte
+        unit = 'KB'
+    if max_s < KiloByte:
+        divisor = 1
+        unit = 'B'
+
+    # scale the data
+    s = [x/divisor for x in s]
+    max_s = max(s)
+
+    # figure out where to place the test name
+    test_anno_y = max(s)
+    if max_s < 10:
+        test_anno_y = max(s)
+    elif max_s < 100:
+        test_anno_y = (max(s) // 10) * 10
+    elif max_s < 1000:
+        test_anno_y = (max(s) // 100) * 100
+    elif max_s < 10000:
+        test_anno_y = (max(s) // 1000) * 1000
+
+    # start the plot
     (fig, ax) = plt.subplots()
 
     ax.plot(t, s)
-    ax.set(xlabel='time (s)', ylabel=f'Memory used ({unit_name})',
+    ax.set(xlabel='time (s)', ylabel=f'Memory used ({unit})',
            title=f'Memory usage by time')
     ax.grid()
 
-    # draw a rectangle around the sub-graph for each name, alternate colors
+    # draw a line at the start of each series, draw series annotation
     matplotlib.rc('font', **{'size': 7})  # set font size smaller
     for (i, (end_time, delta, name, max_mem)) in enumerate(anno):
-        color = '#F0F0F080' if (i % 2) == 0 else '#FFFFFF00'
-        rect = patches.Rectangle((end_time-delta,-100), delta, 2*max_s,
-                                 linewidth=1, ec='red', fc=color)
-        ax.add_patch(rect)
+        l = mlines.Line2D([end_time-delta,end_time-delta], [-1000,2*max_s],
+                          linewidth=1, color='red')
+        ax.add_line(l)
 
-        ax.text(end_time-delta, max_s, f' {name} - {delta:.2f}s, {max_mem:.2f} {unit_name}',
+        ax.text(end_time-delta, test_anno_y,
+                f'{name} - {delta:.2f}s, {max_mem/divisor:.2f}{unit} max',
                 rotation=270, horizontalalignment='left', verticalalignment='top')
+
+    # put in final line - end of last test
+    l = mlines.Line2D([max_t-basetime,max_t-basetime], [-1000,2*max_s],
+                          linewidth=1, color='red')
+    ax.add_line(l)
 
     # put the number of loops in as a "footnote"
     matplotlib.rc('font', **{'size': 5})  # set font size smaller
@@ -96,18 +133,14 @@ def plot_graph(t, s, p_info, anno, unit_name, output_file, quiet, dt):
         plt.show()
 
 
-def plot(input_file, output_file, quiet=False, unit=Megabyte):
+def plot(input_file, output_file, quiet=False):
     """Analyze then draw a plot image file.
 
     input_file   path to the memprof data file to analyze
     output_file  path to the output plot image file
-    unit         a tuple of (multiplier, name)
     quiet        True if we *don't* display the graph on the screen
 
     """
-
-    # break out the unit name and multiplier
-    (unit_mult, unit_name) = unit
 
     # get date/time of last data modification
     data_time = os.path.getmtime(input_file)
@@ -140,6 +173,8 @@ def plot(input_file, output_file, quiet=False, unit=Megabyte):
     max_mem = 0     # max memory used for a test
 
     for line in lines:
+        if not line.strip():
+            continue        # skip blank lines (at end of file?)
         (t_elt, name, s_elt) = line.split('|')
         t_elt = float(t_elt)
 
@@ -147,7 +182,7 @@ def plot(input_file, output_file, quiet=False, unit=Megabyte):
             start_time = t_elt
 
         t_elt -= start_time
-        s_elt = int(s_elt)/unit_mult
+        s_elt = int(s_elt)
 
         s.append(s_elt)
         t.append(t_elt)
@@ -166,7 +201,7 @@ def plot(input_file, output_file, quiet=False, unit=Megabyte):
     delta = t_elt - last_start
     anno.append((t_elt, delta, last_name, max_mem))
 
-    plot_graph(t, s, p_info, anno, unit_name, output_file, quiet, datetime_zulu)
+    plot_graph(t, s, p_info, anno, output_file, quiet, datetime_zulu)
 
 
 if __name__ == '__main__':
@@ -193,14 +228,13 @@ if __name__ == '__main__':
         argv = sys.argv[1:]
 
         try:
-            (opts, args) = getopt.getopt(argv, 'hmo:q',
-                                         ['help', 'mib', 'output=', 'quiet'])
+            (opts, args) = getopt.getopt(argv, 'ho:q',
+                                         ['help', 'output=', 'quiet'])
         except getopt.GetoptError as err:
             usage(err)
             sys.exit(1)
 
         output_file = DefaultOutputFile
-        unit = Megabyte
         p_info = None       # not used if run on commandline
         quiet = False
 
@@ -208,8 +242,6 @@ if __name__ == '__main__':
             if opt in ['-h', '--help']:
                 usage()
                 sys.exit(0)
-            if opt in ['-m', '--mib']:
-                unit = Mebibyte
             if opt in ['-o', '--output']:
                 output_file = param
             if opt in ['-q', '--quiet']:
@@ -221,7 +253,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         # run the program code
-        plot(args[0], output_file, quiet, unit)
+        plot(args[0], output_file, quiet)
 
 
     main()
