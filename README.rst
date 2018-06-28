@@ -29,9 +29,9 @@ Usage
 Examples
 --------
 
-Doing this at the command line:
+Doing this at the command line::
 
-    ./memprof.py -i test,"ls -lR" -i test2,"ls -lR" -a "test annotation" -q
+    ./memprof.py -i test,"ls -lR" -i test2,"ls -lR" -a "test annotation" -q -o example.png
 
 results in this plot file:
 
