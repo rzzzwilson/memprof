@@ -48,7 +48,7 @@ MegaByte = 1024*1024
 GigaByte = 1024*1024*1024
 
 
-def plot_graph(t, s, p_info, anno, output_file, quiet, dt, annotation):
+def plot_graph(t, s, p_info, anno, plot_file, quiet, dt, annotation):
     """
     Plot a graph.
 
@@ -143,16 +143,16 @@ def plot_graph(t, s, p_info, anno, output_file, quiet, dt, annotation):
                 horizontalalignment='right', verticalalignment='top')
 
     # save graph and show, if required
-    fig.savefig(output_file, dpi=1000)
+    fig.savefig(plot_file, dpi=1000)
     if not quiet:
         plt.show()
 
 
-def plot(input_file, output_file, annotation=None, quiet=False):
+def plot(input_file, plot_file, annotation=None, quiet=False):
     """Analyze then draw a plot image file.
 
     input_file   path to the memprof data file to analyze
-    output_file  path to the output plot image file
+    plot_file  path to the output plot image file
     annotation   the annotation string (None if none)
     quiet        True if we *don't* display the graph on the screen
 
@@ -217,7 +217,7 @@ def plot(input_file, output_file, annotation=None, quiet=False):
     delta = t_elt - last_start
     anno.append((t_elt, delta, last_name, max_mem))
 
-    plot_graph(t, s, p_info, anno, output_file, quiet, datetime_zulu, annotation)
+    plot_graph(t, s, p_info, anno, plot_file, quiet, datetime_zulu, annotation)
 
 
 def get_platform_info():
