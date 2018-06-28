@@ -99,7 +99,7 @@ def plot_graph(t, s, p_info, anno, plot_file, quiet, dt, annotation):
     (fig, ax) = plt.subplots()
 
     ax.plot(t, s)
-    ax.set(xlabel='time (s)', ylabel='Memory used ({unit}s)',
+    ax.set(xlabel='time (s)', ylabel=f'Memory used ({unit})',
            title='Memory usage by time')
     ax.grid()
 
