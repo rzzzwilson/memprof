@@ -1,32 +1,36 @@
 Overview
 ========
 
-*memprof* is a python program used to get a memory usage profile from
-the execution of another executable program.  *memprof* takes one or more
-names+filenames and executes each file in another process, keeping track of
-the memory used by the process.  Profile data is written to an output
-file.  This profile data can be plotted.
+*memprof* is a program used to get a memory usage profile from the execution of
+one or more external programs.  A plot file is produced showing memory usage of
+each program with time.  The raw plot data may optionally be saved to a file.
 
-See the *__doc__* string in memprof.py for usage.
+Usage
+-----
 
-This program was written to help determine memory usage in various of the
-performance tests elsewhere in this GitHub repository.  It does this by saving
-all memory measurement values in a single file, as well as the "stdout" of each
-in a save directory.  The aim is to generate enough data such that suite of speed
-test programs can be used with memprof to automatically create a result PDF file.
+Usage: memprof [-h] [-i <file_list>] [-f <filename>] [-o <profile_file>]  \
+                   [-p <plotimage>] [-q] [-s <stdout_save_dir>]
 
-Plotting
+where -h                    prints help messages and quits,
+      -i <name_file>        profiles name+filename (cumulative),
+      -f <filename>         get list of name+filename from file (cumulative),
+      -o <profile_file>     optionally write raw profile data to <profile_file>
+      -p <plotimage>        if specified, the path to the plot file to produce
+                            (default "memprof.png")
+      -q                    don't show the plot file, just save it
+      -s <stdout_save_dir>  path to the directory to save "stdout" files
+                            (default "__stdout__")
+
+Examples
 --------
 
-After running the *memprof.py* program, the data stored in the output file
-may be plotted with *plot.py*.
+Doing this at the command line:
 
-Doing::
+    ./memprof.py -i test,"ls -lR" -i test2,"ls -lR" -a "test annotation"
 
-    make test
+results in this plot file:
 
-will run the profile code (takes about a minute) and then produces the final
-plot image.
+.. image:: example.png
 
 Requirements
 ------------
@@ -38,16 +42,3 @@ Also uses *matplotlib* to plot the graph, get from: https://matplotlib.org/faq/i
 Alternatively, do::
 
     pip3 install -r requirements.txt
-
-Status
-------
-
-The system is running with four test executables measuring string concatenation
-time and memory usage.  The generated image using python3 is:
-
-.. image:: test.png
-
-The generated graph using python2 is:
-
-.. image:: test2.png
-

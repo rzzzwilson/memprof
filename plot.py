@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Plot and save a memprof dataset.
-
-Usage:  plot.py [-h] [-m] [-o <output_image>] [-q] <input_file>
-
-where -h                 prints help text and stops
-      -o <output_image>  saves the image in file <output_image>
-      -q                 be "quiet" - don't show graph, just save
-      <input_file>       the memprof data file to plot
+Plot memprof dataset.
 """
 
 import time
