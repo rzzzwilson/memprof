@@ -55,16 +55,16 @@ def plot_graph(t, s, p_info, anno, plot_file, quiet, dt, annotation):
     t           time series
     s           data series
     p_info      platform description string
-    anno        a list of tuples - annotations
+    anno        a list of tuples: (last_name, start_t, t_elt, max_mem)
     quiet       True if we *don't* display graph on screen
     dt          datetime string of data last modification
     annotation  annotation string, if one
     """
 
     # get max values of memory and time series
-    max_s = max(s)
-    max_t = max(t)
-    basetime = t[0]
+    max_s = max((max(x) for x in s))
+    max_t = max((max(x) for x in t))
+    print(f'max_s={max_s}, max_t={max_t}')
 
     # figure out the best unit to plot with: B, KB or MB
     divisor = GigaByte
@@ -80,10 +80,6 @@ def plot_graph(t, s, p_info, anno, plot_file, quiet, dt, annotation):
         divisor = 1
         unit = 'B'
 
-    # scale the data
-    s = [x/divisor for x in s]
-    max_s = max(s)
-
     # figure out where to place the test name
     test_anno_y = max(s)
     if max_s < 10:
@@ -98,49 +94,65 @@ def plot_graph(t, s, p_info, anno, plot_file, quiet, dt, annotation):
     # start the plot
     (fig, ax) = plt.subplots()
 
-    ax.plot(t, s)
+    # plot the individual test series data
+    for (series_t, series_s, anno_info) in zip(t, s, anno):
+        (last_name, start_t, end_t, max_mem) = anno_info
+        print(f'last_name={last_name}, start_t={start_t}, end_t={end_t}, max_mem={max_mem}')
+        # scale the data
+        s = [x/divisor for x in series_s]
+        max_s = max(s)
+
+        ax.plot(series_t, s)
+
+        # draw a rectange; around the series
+        rect = patches.Rectangle((series_t[0], -1000),
+                                 (series_t[-1] - series_t[0]), max_s + 1000,
+                                 linewidth=1, edgecolor='r', facecolor='none')
+        ax.add_patch(rect)
+
+    # now finish the graph
     ax.set(xlabel='time (s)', ylabel=f'Memory used ({unit})',
            title='Memory usage by time')
     ax.grid()
 
-    # draw a line at the start of each series, draw series annotation
-    matplotlib.rc('font', **{'size': 7})  # set font size smaller
-    for (i, (end_time, delta, name, max_mem)) in enumerate(anno):
-        l = mlines.Line2D([end_time-delta,end_time-delta], [-1000,2*max_s],
-                          linewidth=1, color='red')
-        ax.add_line(l)
+#    # draw a line at the start of each series, draw series annotation
+#    matplotlib.rc('font', **{'size': 7})  # set font size smaller
+#    for (i, (end_time, delta, name, max_mem)) in enumerate(anno):
+#        l = mlines.Line2D([end_time-delta,end_time-delta], [-1000,2*max_s],
+#                          linewidth=1, color='red')
+#        ax.add_line(l)
+#
+#        label = f'{name} - {delta:.2f}s, {max_mem/divisor:.2f}{unit} max'
+#        ax.text(end_time-delta, test_anno_y, label,
+#                rotation=270, horizontalalignment='left', verticalalignment='top')
+#
+#    # put in final line - end of last test
+#    l = mlines.Line2D([max_t-basetime,max_t-basetime], [-1000,2*max_s],
+#                          linewidth=1, color='red')
+#    ax.add_line(l)
 
-        label = f'{name} - {delta:.2f}s, {max_mem/divisor:.2f}{unit} max'
-        ax.text(end_time-delta, test_anno_y, label,
-                rotation=270, horizontalalignment='left', verticalalignment='top')
+#    # put the test annotation in as a "footnote"
+#    if annotation:
+#        matplotlib.rc('font', **{'size': 5})  # set font size smaller
+#        ax.annotate(annotation, xy=(0, 0), 
+#                    xycoords='data', rotation=270,
+#                    xytext=(1.003, 0.00), textcoords='axes fraction',
+#                    horizontalalignment='left', verticalalignment='bottom')
 
-    # put in final line - end of last test
-    l = mlines.Line2D([max_t-basetime,max_t-basetime], [-1000,2*max_s],
-                          linewidth=1, color='red')
-    ax.add_line(l)
+#    # put the platform description string in if we have one
+#    if p_info:
+#        matplotlib.rc('font', **{'size': 5})  # set font size smaller
+#        ax.annotate(p_info, xy=(0, 0),
+#                    xycoords='data', rotation=270,
+#                    xytext=(1.003, 1.00), textcoords='axes fraction',
+#                    horizontalalignment='left', verticalalignment='top')
 
-    # put the test annotation in as a "footnote"
-    if annotation:
-        matplotlib.rc('font', **{'size': 5})  # set font size smaller
-        ax.annotate(annotation, xy=(0, 0), 
-                    xycoords='data', rotation=270,
-                    xytext=(1.003, 0.00), textcoords='axes fraction',
-                    horizontalalignment='left', verticalalignment='bottom')
-
-    # put the platform description string in if we have one
-    if p_info:
-        matplotlib.rc('font', **{'size': 5})  # set font size smaller
-        ax.annotate(p_info, xy=(0, 0),
-                    xycoords='data', rotation=270,
-                    xytext=(1.003, 1.00), textcoords='axes fraction',
-                    horizontalalignment='left', verticalalignment='top')
-
-    # put a 'date/time modified' string on the graph
-    matplotlib.rc('font', **{'size': 4})  # set font size smaller
-    ax.annotate(f'from data generated on {dt}', xy=(0, 0),
-                xycoords='data', #rotation=270,
-                xytext=(1.0, -0.095), textcoords='axes fraction',
-                horizontalalignment='right', verticalalignment='top')
+#    # put a 'date/time modified' string on the graph
+#    matplotlib.rc('font', **{'size': 4})  # set font size smaller
+#    ax.annotate(f'from data generated on {dt}', xy=(0, 0),
+#                xycoords='data', #rotation=270,
+#                xytext=(1.0, -0.095), textcoords='axes fraction',
+#                horizontalalignment='right', verticalalignment='top')
 
     # save graph and show, if required
     fig.savefig(plot_file, dpi=1000)
@@ -152,7 +164,7 @@ def plot(input_file, plot_file, annotation=None, quiet=False):
     """Analyze then draw a plot image file.
 
     input_file   path to the memprof data file to analyze
-    plot_file  path to the output plot image file
+    plot_file    path to the output plot image file
     annotation   the annotation string (None if none)
     quiet        True if we *don't* display the graph on the screen
 
@@ -180,44 +192,56 @@ def plot(input_file, plot_file, annotation=None, quiet=False):
         lines = lines[1:]
 
     # get the actual data into memory
+    series_t = []       # list of lists of time values offset from start time
+    series_s = []       # ditto to above, but memory size
+    anno = []           # list of tuples (name, start_t, end_t, max_mem)
+
+    start_t = None      # start time of a series
+    last_name = None    # name of previous series
+
+    s = []              # data for one test series
     t = []
-    s = []
-    anno = []
-    start_time = None
-    last_name = None
-    last_start = None
-    max_mem = 0     # max memory used for a test
+    max_mem = 0         # max memory used for a test
 
     for line in lines:
-        if not line.strip():
+        line = line.strip()
+        if not line:
             continue        # skip blank lines (at end of file?)
         (t_elt, name, s_elt) = line.split('|')
         t_elt = float(t_elt)
 
-        if start_time is None:
-            start_time = t_elt
+        if start_t is None:
+            start_t = t_elt
 
-        t_elt -= start_time
+        t_elt -= start_t
         s_elt = int(s_elt)
 
         s.append(s_elt)
         t.append(t_elt)
 
-        if last_name != name:
+        if last_name != name:   # if test series changed
             if last_name:
-                delta = t_elt - last_start
-                anno.append((t_elt, delta, last_name, max_mem))
+                anno.append((last_name, start_t, t_elt, max_mem))
+                series_s.append(s)
+                series_t.append(t)
+                s = [s_elt]
+                t = [t_elt]
             last_name = name
-            last_start = t_elt
+            start_t = t_elt
             max_mem = 0
 
         if s_elt > max_mem:
             max_mem = s_elt
 
-    delta = t_elt - last_start
+    delta = t_elt - start_t
     anno.append((t_elt, delta, last_name, max_mem))
 
-    plot_graph(t, s, p_info, anno, plot_file, quiet, datetime_zulu, annotation)
+    print(f'type(series_t)={type(series_t)}, len(series_t)={len(series_t)}')
+    print(f'type(series_s)={type(series_s)}, len(series_s)={len(series_s)}')
+    print(f'anno={anno}')
+
+    plot_graph(series_t, series_s, p_info, anno,
+                plot_file, quiet, datetime_zulu, annotation)
 
 
 def get_platform_info():
@@ -288,16 +312,20 @@ def memprof(files, output_file, save_dir):
     save_dir     the path to the directory to save stdout in
     """
 
-    # open the stats save file and write platform string
+    # open the stats save file and write platform string and timestamp
     fd = open(output_file, 'w')
     p_info = get_platform_info()
-    fd.write(f'# {p_info}\n')
+
+    gt = time.gmtime()
+    datetime_zulu = time.strftime('%Y-%m-%dT%H:%M:%SZ', gt)
+
+    fd.write(f'# {p_info}|{datetime_zulu}\n')
 
     # create the output save directory
     try:
         os.mkdir(save_dir)
     except FileExistsError:
-        pass        # already exists
+        pass        # already exists, overwrite
 
     # process each executable
     for (name, command) in files:
