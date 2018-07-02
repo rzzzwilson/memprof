@@ -5,8 +5,9 @@
 one or more external programs.  A plot file is produced showing memory usage of
 each program with time.  The raw plot data may optionally be saved to a file.
 
-Usage: memprof [-h] [-i <file_list>] [-f <filename>] [-o <profile_file>]  \\
-                   [-p <plotimage>] [-q] [-s <stdout_save_dir>]
+Usage: memprof [-a <annotation>] [-h] [-i <file_list>] [-f <filename>]   \\
+               [-o <profile_file>] [-p <plotimage>] [-q]                 \\
+               [-s <stdout_save_dir>] [-x <data_file>]
 
 where -a <annotation>       put the string <annotation> into the plot file
       -h                    prints help messages and quits,
@@ -17,7 +18,7 @@ where -a <annotation>       put the string <annotation> into the plot file
                             (default "memprof.png")
       -q                    don't show the plot file, just save it
       -s <stdout_save_dir>  path to the directory to save "stdout" files
-                            (default "__stdout__")
+      -x <data_file>        just plot data from <data_file>
 """
 
 import os
@@ -38,7 +39,6 @@ import matplotlib.lines as mlines
 
 
 # default output filenames
-#DefaultOutputFile = 'memprof.out'
 DefaultOutputPlot = 'memprof.png'
 DefaultStdoutSaveDir = '__stdout__'
 
@@ -48,111 +48,98 @@ MegaByte = 1024*1024
 GigaByte = 1024*1024*1024
 
 
-def plot_graph(t, s, p_info, anno, plot_file, quiet, dt, annotation):
+def plot_graph(t, m, anno, plot_file, quiet, p_info, dt, annotation):
     """
     Plot a graph.
 
     t           time series
-    s           data series
-    p_info      platform description string
-    anno        a list of tuples: (last_name, start_t, t_elt, max_mem)
+    m           memory series
+    anno        a list of tuples - annotations
     quiet       True if we *don't* display graph on screen
+    p_info      platform description string
     dt          datetime string of data last modification
     annotation  annotation string, if one
     """
 
     # get max values of memory and time series
-    max_s = max((max(x) for x in s))
-    max_t = max((max(x) for x in t))
-    print(f'max_s={max_s}, max_t={max_t}')
+    max_m = max(m)
+    max_t = max(t)
+    basetime = t[0]
 
     # figure out the best unit to plot with: B, KB or MB
     divisor = GigaByte
     unit = 'GB'
 
-    if max_s < GigaByte:
+    if max_m < GigaByte:
         divisor = MegaByte
         unit = 'MB'
-    if max_s < MegaByte:
+    if max_m < MegaByte:
         divisor = KiloByte
         unit = 'KB'
-    if max_s < KiloByte:
+    if max_m < KiloByte:
         divisor = 1
         unit = 'B'
 
+    # scale the data, get maximum values
+    m = [x/divisor for x in m]
+    max_m = max(m)
+
     # figure out where to place the test name
-    test_anno_y = max(s)
-    if max_s < 10:
-        test_anno_y = max(s)
-    elif max_s < 100:
-        test_anno_y = (max(s) // 10) * 10
-    elif max_s < 1000:
-        test_anno_y = (max(s) // 100) * 100
-    elif max_s < 10000:
-        test_anno_y = (max(s) // 1000) * 1000
+    test_anno_y = max(m)
+    if max_m < 10:
+        test_anno_y = max(m)
+    elif max_m < 100:
+        test_anno_y = (max(m) // 10) * 10
+    elif max_m < 1000:
+        test_anno_y = (max(m) // 100) * 100
+    elif max_m < 10000:
+        test_anno_y = (max(m) // 1000) * 1000
 
     # start the plot
     (fig, ax) = plt.subplots()
 
-    # plot the individual test series data
-    for (series_t, series_s, anno_info) in zip(t, s, anno):
-        (last_name, start_t, end_t, max_mem) = anno_info
-        print(f'last_name={last_name}, start_t={start_t}, end_t={end_t}, max_mem={max_mem}')
-        # scale the data
-        s = [x/divisor for x in series_s]
-        max_s = max(s)
-
-        ax.plot(series_t, s)
-
-        # draw a rectange; around the series
-        rect = patches.Rectangle((series_t[0], -1000),
-                                 (series_t[-1] - series_t[0]), max_s + 1000,
-                                 linewidth=1, edgecolor='r', facecolor='none')
-        ax.add_patch(rect)
-
-    # now finish the graph
+    # plot actual data, set labels and turn on grod
+    ax.plot(t, m)
     ax.set(xlabel='time (s)', ylabel=f'Memory used ({unit})',
            title='Memory usage by time')
     ax.grid()
 
-#    # draw a line at the start of each series, draw series annotation
-#    matplotlib.rc('font', **{'size': 7})  # set font size smaller
-#    for (i, (end_time, delta, name, max_mem)) in enumerate(anno):
-#        l = mlines.Line2D([end_time-delta,end_time-delta], [-1000,2*max_s],
-#                          linewidth=1, color='red')
-#        ax.add_line(l)
-#
-#        label = f'{name} - {delta:.2f}s, {max_mem/divisor:.2f}{unit} max'
-#        ax.text(end_time-delta, test_anno_y, label,
-#                rotation=270, horizontalalignment='left', verticalalignment='top')
-#
-#    # put in final line - end of last test
-#    l = mlines.Line2D([max_t-basetime,max_t-basetime], [-1000,2*max_s],
-#                          linewidth=1, color='red')
-#    ax.add_line(l)
+    # draw a rectangel around each series, draw series annotation
+    # anno tuple is: (name, max_mem, start_time, stop_time)
+    matplotlib.rc('font', **{'size': 7})  # set font size smaller
+    for (i, (name, max_mem, start_t, end_t)) in enumerate(anno):
+        # put the rectange around the series data
+        rect = patches.Rectangle((start_t-basetime, -1000), end_t-start_t, 2*max_m+1000,
+                                 linewidth=1, edgecolor='red', facecolor='#f0f0f080')
+        ax.add_patch(rect)
 
-#    # put the test annotation in as a "footnote"
-#    if annotation:
-#        matplotlib.rc('font', **{'size': 5})  # set font size smaller
-#        ax.annotate(annotation, xy=(0, 0), 
-#                    xycoords='data', rotation=270,
-#                    xytext=(1.003, 0.00), textcoords='axes fraction',
-#                    horizontalalignment='left', verticalalignment='bottom')
+        # add annotation
+        label = f'{name} - {end_t-start_t:.2f}s, {max_mem/divisor:.2f}{unit} max'
+        ax.text(start_t, test_anno_y, label,
+                rotation=270, horizontalalignment='left', verticalalignment='top')
 
-#    # put the platform description string in if we have one
-#    if p_info:
-#        matplotlib.rc('font', **{'size': 5})  # set font size smaller
-#        ax.annotate(p_info, xy=(0, 0),
-#                    xycoords='data', rotation=270,
-#                    xytext=(1.003, 1.00), textcoords='axes fraction',
-#                    horizontalalignment='left', verticalalignment='top')
+    # put the test annotation in as a "footnote"
+    if annotation:
+        matplotlib.rc('font', **{'size': 5})  # set font size smaller
+        ax.annotate(annotation, xy=(0, 0), 
+                    xycoords='data', rotation=270,
+                    xytext=(1.003, 0.00), textcoords='axes fraction',
+                    horizontalalignment='left', verticalalignment='bottom')
 
-#    # put a 'date/time modified' string on the graph
-#    matplotlib.rc('font', **{'size': 4})  # set font size smaller
-#    ax.annotate(f'from data generated on {dt}', xy=(0, 0),
-#                xycoords='data', #rotation=270,
-#                xytext=(1.0, -0.095), textcoords='axes fraction',
-#                horizontalalignment='right', verticalalignment='top')
+    # put the platform description string in if we have one
+    if p_info:
+        matplotlib.rc('font', **{'size': 5})  # set font size smaller
+        ax.annotate(p_info, xy=(0, 0),
+                    xycoords='data', rotation=270,
+                    xytext=(1.003, 1.00), textcoords='axes fraction',
+                    horizontalalignment='left', verticalalignment='top')
+
+    # put a 'date/time modified' string on the graph
+    matplotlib.rc('font', **{'size': 4})  # set font size smaller
+    ax.annotate(f'generated on {dt}', xy=(0, 0),
+                xycoords='data', #rotation=270,
+                xytext=(1.0, -0.095), textcoords='axes fraction',
+                horizontalalignment='right', verticalalignment='top')
 
     # save graph and show, if required
     fig.savefig(plot_file, dpi=1000)
@@ -167,81 +154,88 @@ def plot(input_file, plot_file, annotation=None, quiet=False):
     plot_file    path to the output plot image file
     annotation   the annotation string (None if none)
     quiet        True if we *don't* display the graph on the screen
-
     """
 
-    # get date/time of last data modification
-    data_time = os.path.getmtime(input_file)
-    gm_struct = time.gmtime(data_time)
-    datetime_zulu = time.strftime('%Y-%m-%dT%H:%M:%SZ', gm_struct)
+    # data file contains lines of this format:
+    #     1529579605.214047|name|274432
+    # but the first line is a comment containing platform info and
+    # the date the data was generated:
+    #     # Darwin-17.6.0-x86_64-i386-64bit|2018-07-02T07:28:11Z
 
-    # read data from file
-    # format: 1529579605.214047|name|274432
-    #         time              name memory
+    # get all lines within the data file
     with open(input_file) as fd:
         lines = fd.readlines()
 
-    # first line should be a comment containing a platform description
+    # first line contains a platform description and data generation time
     tmp = lines[0].strip()
+    lines = lines[1:]
+
     p_info = None
+    datetime_zulu = None
+
     if tmp.startswith('#'):
-        tmp = tmp[1:]
-        while tmp[0] == ' ':
-            tmp = tmp[1:]
-        p_info = tmp
-        lines = lines[1:]
+        (p_info, datetime_zulu) = tmp[1:].split('|')
+    else:
+        raise RuntimeError(f"Line 0 of file {input_file} missing annotation, got '{tmp}'")
 
-    # get the actual data into memory
-    series_t = []       # list of lists of time values offset from start time
-    series_s = []       # ditto to above, but memory size
-    anno = []           # list of tuples (name, start_t, end_t, max_mem)
+    # split data into two parallel lists of lists of mem size and timestamp,
+    # one for each test in the file.
+    data_time = []
+    data_mem = []
+    anno = []
+    start_time = float(lines[0].split('|')[0])    # first line start time
+    last_name = None
+    max_mem = 0     # max memory used for a test
 
-    start_t = None      # start time of a series
-    last_name = None    # name of previous series
-
-    s = []              # data for one test series
-    t = []
-    max_mem = 0         # max memory used for a test
+    # temporary collectors of time/mem data for one test
+    # these are appended to data_time/data_mem when tets name changes
+    time_series = []
+    mem_series = []
 
     for line in lines:
-        line = line.strip()
-        if not line:
+        if not line.strip():
             continue        # skip blank lines (at end of file?)
-        (t_elt, name, s_elt) = line.split('|')
-        t_elt = float(t_elt)
+        (time_val, name, mem_val) = line.split('|')
+        time_val = float(time_val)
+        time_val -= start_time
+        mem_val = int(mem_val)
 
-        if start_t is None:
-            start_t = t_elt
-
-        t_elt -= start_t
-        s_elt = int(s_elt)
-
-        s.append(s_elt)
-        t.append(t_elt)
-
-        if last_name != name:   # if test series changed
-            if last_name:
-                anno.append((last_name, start_t, t_elt, max_mem))
-                series_s.append(s)
-                series_t.append(t)
-                s = [s_elt]
-                t = [t_elt]
+        if last_name != name:
+            if last_name is not None:
+                data_time.append(time_series)
+                data_mem.append(mem_series)
+                anno.append((last_name, max_mem, time_series[0], time_series[-1]))
+            
+            time_series = []
+            mem_series = []
             last_name = name
-            start_t = t_elt
             max_mem = 0
 
-        if s_elt > max_mem:
-            max_mem = s_elt
+        time_series.append(time_val)
+        mem_series.append(mem_val)
 
-    delta = t_elt - start_t
-    anno.append((t_elt, delta, last_name, max_mem))
+        if mem_val > max_mem:
+            max_mem = mem_val
 
-    print(f'type(series_t)={type(series_t)}, len(series_t)={len(series_t)}')
-    print(f'type(series_s)={type(series_s)}, len(series_s)={len(series_s)}')
-    print(f'anno={anno}')
+    data_time.append(time_series)
+    data_mem.append(mem_series)
+    anno.append((name, max_mem, time_series[0], time_series[-1]))
 
-    plot_graph(series_t, series_s, p_info, anno,
-                plot_file, quiet, datetime_zulu, annotation)
+    # now, join the individual test series data together with a 0 for memory
+    # at each start/end of a test series, using start/end time
+    new_data_time = []
+    new_data_mem = []
+    for (t, m) in zip(data_time, data_mem):
+        new_data_time.append(t[0])
+        new_data_time.extend(t)
+        new_data_time.append(t[-1])
+
+        new_data_mem.append(0)
+        new_data_mem.extend(m)
+        new_data_mem.append(0)
+
+    plot_graph(new_data_time, new_data_mem, anno,
+               plot_file, quiet, p_info, datetime_zulu, annotation)
 
 
 def get_platform_info():
@@ -263,7 +257,6 @@ def canon_name_file(param):
     param  a string of form "name,path_to_exe".
 
     Return a tuple (name, path_to_exe).
-
     Returns None if something went wrong.
     """
 
@@ -325,7 +318,7 @@ def memprof(files, output_file, save_dir):
     try:
         os.mkdir(save_dir)
     except FileExistsError:
-        pass        # already exists, overwrite
+        pass        # already exists
 
     # process each executable
     for (name, command) in files:
@@ -351,10 +344,13 @@ def memprof(files, output_file, save_dir):
 
 # to help the befuddled user
 def usage(msg=None):
+    """Print the module docstring and optional msg."""
+
     print(__doc__)
     if msg:
         delim = '*'*80
         print(f'{delim}\n{msg}\n{delim}\n')
+
 
 # our own handler for uncaught exceptions
 def excepthook(type, value, tb):
@@ -364,30 +360,32 @@ def excepthook(type, value, tb):
     msg += '=' * 80 + '\n'
     print(msg)
 
+
 def main():
     # plug our handler into the python system
     sys.excepthook = excepthook
-    
+
     # parse the CLI params
     argv = sys.argv[1:]
-   
+
     try:
-        (opts, args) = getopt.getopt(argv, 'a:hi:f:o:p:qs:',
+        (opts, args) = getopt.getopt(argv, 'a:hi:f:o:p:qs:x:',
                                      ['annotation=', 'help', 'input=', 'file=',
-                                      'output=', 'plot=', 'quiet', 'save='])
+                                      'output=', 'plot=', 'quiet',
+                                      'save=', 'xdebug='])
     except getopt.GetoptError as err:
         usage(err)
         sys.exit(1)
    
-    # create a temporary file for raw data
-    (_, data_file) = tempfile.mkstemp(suffix='.tmp', prefix='memprof_',text=True)
-
     annotation = None               # default is no annotation
-    output_file = None              # default is no saved raw data file
+    data_file = None                # default is no saved raw data file
+    save_output = False             # don't save raw data is default
     plot_file = DefaultOutputPlot
     quiet = False
+    save_stdout = False
     save_dir = DefaultStdoutSaveDir
     prog_list = []
+    x_file = None
     
     for (opt, param) in opts:
         if opt in ['-a', '--annotation']:
@@ -403,31 +401,46 @@ def main():
         elif opt in ['-f', '--file']:
             prog_list.extend(read_input_file(param))
         elif opt in ['-o', '--output']:
-            output_file = param
+            save_output = True
+            data_file = param
         elif opt in ['-p', '--plot']:
             plot_file = param
         elif opt in ['-q', '--quiet']:
             quiet = True
         elif opt in ['-s', '--save']:
+            save_stdout = True
             save_dir = param
+        elif opt in ['-x', '--xdebug']:
+            x_file = param
 
     # sanity check
     if not prog_list:
         usage()
         abort('You must supply one or more executable files to profile.')
     
-    # run the sampling to get the raw data
-    memprof(prog_list, data_file, save_dir)
+    # if no data save file, create a temporary file for raw data
+    if not save_output:
+        (_, data_file) = tempfile.mkstemp(suffix='.tmp', prefix='memprof_',text=True)
 
-    # plot the raw data
-    plot(data_file, plot_file, annotation, quiet)
+    # if no stdout save directory, create a temporary directory for files
+    if not save_stdout:
+        save_dir = tempfile.mkdtemp(suffix='.tmp', prefix='memprof_')
 
-    # if raw data file required to be saved, copy tmp file to save file
-    if output_file:
-        shutil.copyfile(data_file, output_file)
+    # run the sampling to get the raw data, and plot
+    if not x_file:
+        memprof(prog_list, data_file, save_dir)
+        plot(data_file, plot_file, annotation, quiet)
+    else:
+        # but just plot existing data file for debug
+        plot(x_file, plot_file, annotation, quiet)
 
-    # delete the temporary file
-    os.remove(data_file)
+    # if not saving raw data file, delete data
+    if not save_output:
+        os.remove(data_file)
+
+    # if not saving stdout output, delete whole directory
+    if not save_stdout:
+        shutil.rmtree(save_dir, ignore_errors=True)
 
 
 main()
