@@ -9,5 +9,9 @@ test:
 test2:
 	./memprof.py -p test2.png -f test2_files.dat -o test2.out
 
+# do really short tests to show time between tests
+short:
+	./memprof.py -i short,"ls -lR" -i short2,"ls -lR" -a "test annotation"
+
 all:	clean test test2
 
