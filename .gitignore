@@ -2,9 +2,7 @@
 *.swp
 *.out
 *.log
-stdout
 .DS_Store
-__stdout__
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
