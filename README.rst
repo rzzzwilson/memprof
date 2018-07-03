@@ -40,7 +40,7 @@ contents of the `test_files.dat` file::
     stringio - python3,python3 examples/concat_stringio.py
 
 The data format is similar the that required for the `-i` option.  When we run
-these four tests with `memprof`:
+these four tests with `memprof`::
 
     ./memprof.py -p test.png -f test_files.dat -o test.out -a "20,000,000 iterations"
 
