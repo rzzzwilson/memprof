@@ -13,13 +13,9 @@ Usage
 
 ::
 
-    "memprof" is a program used to get a memory usage profile from the execution of
-    one or more external programs.  A plot file is produced showing memory usage of
-    each program with time.  The raw plot data may optionally be saved to a file.
-    
-    Usage: memprof [-a <annotation>] [-h] [-i <file_list>] [-f <filename>]   \
-                   [-o <profile_file>] [-p <plotimage>] [-q]                 \
-                   [-s <stdout_save_dir>] [-x <data_file>]
+    memprof [-a <annotation>] [-h] [-i <file_list>] [-f <filename>]   \
+            [-o <profile_file>] [-p <plotimage>] [-q]                 \
+            [-s <stdout_save_dir>] [-x <data_file>]
     
     where -a <annotation>       put the string <annotation> into the plot file
           -h                    prints help messages and quits,
@@ -35,13 +31,30 @@ Usage
 Examples
 --------
 
-Doing this at the command line::
+To run a series of tests, you can put test information in a file.  Here is the
+contents of the `test_files.dat` file::
+
+    naive - python3,python3 examples/concat_naive.py
+    join - python3,python3 examples/concat_join.py
+    comprehension - python3,python3 examples/concat_comprehension.py
+    stringio - python3,python3 examples/concat_stringio.py
+
+The data format is similar the that required for the `-i` option.  When we run
+these four tests with `memprof`:
+
+    ./memprof.py -p test.png -f test_files.dat -o test.out -a "20,000,000 iterations"
+
+we get the output image:
+
+.. image:: example.png
+
+We can run any command.  Doing this at the command line::
 
     ./memprof.py -i test,"ls -lR" -i test2,"ls -lR" -a "test annotation" -q -p example.png
 
 results in this plot file:
 
-.. image:: example.png
+.. image:: example2.png
 
 Requirements
 ------------
