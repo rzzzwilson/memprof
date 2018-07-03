@@ -4,7 +4,6 @@
 Test of "stringIO" string concatenation.
 """
 
-import common
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -14,6 +13,6 @@ except ImportError:
 
 
 a = StringIO()
-for n in xrange(common.loops):
+for n in xrange(20000000):
     a.write(str(n))
 a = a.getvalue()

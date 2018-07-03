@@ -5,11 +5,10 @@ Test of "comprehension" string concatenation.
 """
 
 import sys
-import common
 if sys.version_info >= (3, 0):
     # python3 - make changes
     xrange = range
 
 
-a = [str(n) for n in xrange(common.loops)]
+a = [str(n) for n in xrange(20000000)]
 a = ''.join(a)
